@@ -1,0 +1,123 @@
+Overview
+In this assignment you will learn and practice developing a multithreaded application using both Java and C with Pthreads. So you will submit two programs!
+The application you are asked to implement is from our textbook (SGG), namely Multithreaded Sorting Application with an addition of computing average of the given values.
+Here is the description of it for convenience: Write a multithreaded sorting program consisting of three threads: main, sorting_avg, merging_avg. They work as follows:
+
+Main thread randomly generates an array of double values with a given size (say, N=1000), and divides it into two smaller arrays of equal size. It then passes each sub-array to sorting_avg thread (creates two copies of the same thread), and waits until these two sub-arrays are sorted and the average of the values in each array are computed. It then calls merging_avg thread by passing the already sorted two sub-arrays, and the averages of the first and second sub-arrays as parameters.
+
+Sorting_avg thread sorts the given sub-array using insertion sort or selection sort (one is enough and you need to implement either one), and computes the average of the values in the given array. So this thread returns sorted sub-array and its average.
+
+Merging_avg thread takes both sorted sub-arrays and the their averages as parameters. It then merges them into a single sorted array in a linear time (so don't call sorting function again! You can simply have a loop and take the smallest from the sorted arrays until they are all merged!), and simply find the overall average by taking the average of the given two averages (this will work because we assume both sub-arrays have the same size!). 
+
+Your program should take take an integer (say N)  from the command line (you can assume that we will always give an even number). This number N represents the size of the array that needs to be sorted.  Accordingly, your main thread should create an array of N double values and randomly select the values from the range of [1.0, 1000.0]. Then sort them using multithreading and compute the average of these values as described above. While doing these, we like to also  measure how long it takes to finish this task. For the comparison purposes, you are also asked to simply call your sort function to sort the whole array and  compute average without multithreading and measure how long it takes (basically the main thread simply calls the sorting_avg thread for the whole array).
+
+Here is how your program should be executed with a sample output:
+
+> ./prog 1000
+
+or in case of Java
+
+> java prog_j 1000
+Sorting is done in 10.0ms when two threads are used
+Sorting is done in 20.0ms when one thread is used
+
+The numbers 10.0 and 20.0 here are just an example! Your actual numbers will be different and depend on the runs. (I have some more discussion at the end of this document).
+
+
+You need to figure out how to implement this program in Java and C (Pthreads)! You need to be careful about how to pass parameters in C and Java. For example, in C, because global data are shared across all threads, perhaps the easiest way is to create a global array and just pass index values/ranges as parameters. Each sorting thread will work on one half of this array. A second global array of the same size will also be created so that the merging thread will then merge the two sub-arrays into this second array.  This programming project will require passing parameters to each of the sorting threads. In particular, it will be necessary to identify the starting index from which each thread is to begin sorting. You need to deal with similar issues in Java as well. In both case please do not use readily available sort functions/methods, you need to implement a simple one (insertion or selection sort) by yourself!
+
+Part 1
+In this part you will write your program in C with Pthreads.
+Part 2
+In this part you will write your program in Java.  
+
+Part 3
+Test both programs with different values of N (1000, 5000, 10000) and see how they perform.
+Make a table of your results and include it in your REPORT.txt.
+Comment on your results under two threads vs. no threading or using different languages (C or Java).
+REPORT:
+Create a REPORT.txt file to answer the following questions:
+
+1. List all of the people that you have collaborated with on this assignment. For each person indicate the level of collaboration (small, medium, large). Also write a few sentences describing what was discussed. Indicate whether you were mainly giving help or receiving help.
+
+2. Do you think everything you did is correct? .....
+
+3. If not, give a brief description of what is working and what progress was made on the part that is not working.
+
+4. Comments (e.g., what were the challenges, how to make this assignment more interesting etc.):
+
+5. Program output: (if you print anything on the screen, then copy/paste it here. don't copy/paste output files here)
+SUBMISSION:
+Go to assign2 and run  "make clean", we don't need your .o .class or executable files. Just have .h, .c, .txt, .java, and Makefile under assign2.
+Then go to cs3733 and zip -r the whole directory of assign2 as a single file and name it as abc123-assign2.zip, where abc123 should be your abc123 ID.
+zip -r  abc123-assign2.zip assign2
+The -r flag stands for "recursive," which tells zip to include all files and subdirectories within the specified folder.
+This is very important for TA to get all files at once. So, please follow these directions in future assignments as well!
+Please make sure your zip file contains all the files you need to submit! For some reasons, some students submit empty zip files! To avoid the problems later, after uploading your zip files, download them into another folder and unzip to make sure your files are in it!
+You need to submit this single zip file through Canvas  !!! No e-mail submissions !!!
+
+GRADING:
+This assignment is worth 40 points (Correct execution of each program is 15pt and Part 3 is 10pt) To receive full credit for this assignment, you must submit it through Canvas before the due date and it must be in the format described above.
+here is the high level idea!
+
+main()
+{
+n will be given as command line argument
+struct timespec ts_begin, ts_end;
+double elapsed;  
+
+create array A ( n double values) and randomly generate these values 
+also create arrays B and C with the same size of A
+                   Afirsthalf and AsecondHalf with the half size of A
+
+//-------------------- ONE THREAD CASE --------------------
+copy A into B
+clock_gettime(CLOCK_MONOTONIC, &ts_begin);  
+create thB sortThread_avg to sort B and compute its average 
+      /* implement selection or insertion sort O(n^2) */
+      /* return sorted array and overallAvg */ 
+join thB
+
+clock_gettime(CLOCK_MONOTONIC, &ts_end);  
+elapsed = ts_end.tv_sec - ts_begin.tv_sec; 
+elapsed += (ts_end.tv_nsec - ts_begin.tv_nsec) / 1000000000.0; 
+
+Sorting by ONE thread is done in elapsed*1000 ms    
+Print average and at least first 10 values of the the sorted array
+
+ //-------------------- TWO THREADS CASE --------------------
+copy A into Afirsthalf  and AsecondHalf
+clock_gettime(CLOCK_MONOTONIC, &ts_begin);  
+create thA1  sortThread_avg to sort Afirsthalf and compute AfirstAvg  /* use selection/insertion sort O((n/2)^2) */
+create thA2  sortThread to sort Asecondhalf  and compute AsecondAvg   /* use selection/insertion sort O((n/2)^2) */
+
+join thA1
+join thA2
+
+create thM  mergeThread_avg by paasing Afirsthalf, Asecondhalf, AfirstAvg, AfirstAvg 
+    /* make sure this just merges the sorted values form two arrays while keeping them sorted.  O(n) */
+    /* dont' copy these arrays and then call sort! which will be like sorting the whole thing! */
+    /* and simply computes overalAvg = (AfirstAvg + AfirstAvg)/2,   */
+    /* return merged/sorted array and overallAvg  */
+
+join thM
+clock_gettime(CLOCK_MONOTONIC, &ts_end);  
+elapsed = ts_end.tv_sec - ts_begin.tv_sec; 
+elapsed += (ts_end.tv_nsec - ts_begin.tv_nsec) / 1000000000.0; 
+
+Sorting by TWO threads is done in elapsed*1000 ms     
+Print overallAvg and at least first 10 values of the the sorted array
+}
+ 
+
+What should be the execution time ratio between two thread vs. single threads?
+
+In theory, a single thread (using selection/insertion sort) takes O(n^2), right? So if you divide the array into two parts, then sorting the first half takes O((n/2)^2) and similarly sorting the second half takes the same + merging takes O(n)!
+
+If two parts are sorted by different CPU cores in parallel using kernel level threads, then (in theory) the execution time of two threads would be around 1/4 of single thread, right? if only a single CPU is used with user level threads then the ratio could be around 1/2.
+
+But then there are a lot of other issues!. For example, switching between threads (context switching cost). Also consider paging: in case of single thread dealing with a large array may cause more page faults etc) . If you first execute single thread and then two threads in the same program, single thread case may be busy with getting all the pages and cause more page fault; but then  two threads may not result any page fault and use the existing data and cause less page fault. If you see wildly different execution times, try two threads first, then run single thread to see if there is any difference! Moreover, measuring execution time is not an easy job. Sometimes due to how clock is updated, you may get interesting execution times. That is why actually people run the same experiment several times and then take their averages...
+
+In summary, it is possible to get wild execution times beyond the expected theoretical ratios.  But if is too wild, it is better to first make sure  your code is working correctly. Also verify that the sorted array is actually sorted at the end in both cases. Then report the execution times that you got and try to explain what you see and how/why they might be different than the theoretical expectations.
+
+ 
